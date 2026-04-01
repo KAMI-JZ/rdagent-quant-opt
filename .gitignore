@@ -1,6 +1,7 @@
 # Environment
 .env
 venv/
+venv_linux/
 .venv/
 
 # Python
@@ -32,3 +33,10 @@ docker-compose.override.yml
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Cache
+pickle_cache/
+.pytest_cache/
+
+# Claude Code
+.claude/

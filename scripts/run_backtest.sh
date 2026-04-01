@@ -26,28 +26,31 @@ echo ""
 # ──────── Profile Configuration ────────
 case "$PROFILE" in
     budget)
-        echo "💰 Budget Profile: All DeepSeek Chat"
+        echo "💰 Budget Profile: All DeepSeek Chat (adaptive=budget)"
         echo "   Estimated cost: ~\$0.5-1.5 for $ITERATIONS iterations"
         export CHAT_MODEL="deepseek/deepseek-chat"
+        export ADAPTIVE_MODE="budget"
         export SYNTHESIS_MODEL="deepseek/deepseek-chat"
         export IMPLEMENTATION_MODEL="deepseek/deepseek-chat"
         export ANALYSIS_MODEL="deepseek/deepseek-chat"
         ;;
     optimized)
-        echo "⚡ Optimized Profile: Reasoner for thinking, Chat for coding"
+        echo "⚡ Optimized Profile: Reasoner for thinking, Chat for coding (adaptive=optimized)"
         echo "   Estimated cost: ~\$1.5-3.0 for $ITERATIONS iterations"
         export CHAT_MODEL="deepseek/deepseek-chat"
+        export ADAPTIVE_MODE="optimized"
         export SYNTHESIS_MODEL="deepseek/deepseek-reasoner"
         export IMPLEMENTATION_MODEL="deepseek/deepseek-chat"
         export ANALYSIS_MODEL="deepseek/deepseek-reasoner"
         ;;
     premium)
-        echo "👑 Premium Profile: Claude for thinking, DeepSeek for coding"
-        echo "   Estimated cost: ~\$10-20 for $ITERATIONS iterations"
+        echo "👑 Premium Profile: Opus 4.6 for creativity, Reasoner for analysis, Chat for coding"
+        echo "   Estimated cost: ~\$15-30 for $ITERATIONS iterations"
         export CHAT_MODEL="deepseek/deepseek-chat"
-        export SYNTHESIS_MODEL="anthropic/claude-sonnet-4-20250514"
+        export ADAPTIVE_MODE="premium"
+        export SYNTHESIS_MODEL="anthropic/claude-opus-4-6"
         export IMPLEMENTATION_MODEL="deepseek/deepseek-chat"
-        export ANALYSIS_MODEL="anthropic/claude-sonnet-4-20250514"
+        export ANALYSIS_MODEL="deepseek/deepseek-reasoner"
         ;;
     baseline)
         echo "📊 Baseline Profile: Single model (for comparison)"

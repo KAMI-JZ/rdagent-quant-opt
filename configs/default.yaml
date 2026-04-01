@@ -1,0 +1,185 @@
+# RD-Agent Quant Optimizer Configuration
+# ═══════════════════════════════════════
+# Last updated: 2026-03-19
+
+# ──────────────────────────────────────
+# Data Source Configuration (数据源配置)
+# ──────────────────────────────────────
+# provider: 数据源选择
+#   "polygon" = 只用 Polygon.io（最准确，需要 API key）
+#   "yahoo"   = 只用 Yahoo Finance（免费，无需注册，精度较低）
+#   "hybrid"  = 优先 Polygon，失败回退 Yahoo（推荐）
+data:
+  provider: "hybrid"
+  polygon_api_key_env: "POLYGON_API_KEY"  # 从哪个环境变量读取 API key
+  market: "us_sp500"                       # 目标市场：美股标普500
+  universe: "survivorship_free"            # 股票池模式：
+    # "survivorship_free" = 包含退市股票的真实历史（推荐，避免生存者偏差）
+    # "current_only"      = 只用当前成分股（简单但结果有偏差）
+  start_date: "2010-01-01"                 # 数据起始日期
+  end_date: "2024-12-31"                   # 数据结束日期
+  validation:                              # 数据质量校验
+    enabled: true
+    max_missing_pct: 0.05                  # 缺失超过5%的交易日 → 报错
+    max_daily_change: 0.50                 # 单日涨跌超过50% → 标记为可能的未调整拆分
+    max_consecutive_same: 5                # 连续相同收盘价超过5天 → 标记为可能停牌
+
+# ──────────────────────────────────────
+# Adaptive Model Selection (NEW)
+# ──────────────────────────────────────
+# 自适应选择器: 根据任务特征自动选最优模型
+# budget    = 全部用 DeepSeek Chat（最省钱）
+# optimized = 推理用 Reasoner，代码用 Chat（推荐）
+# premium   = 构思用 Opus 4.6，推理用 Reasoner，代码用 Chat
+adaptive_mode: "optimized"
+
+# ──────────────────────────────────────
+# Model Routing Strategy
+# ──────────────────────────────────────
+# 当 adaptive_mode 启用时，此表会被自动覆盖
+# 手动模式下仍可直接指定路由
+routing:
+  specification: efficient
+  synthesis: frontier            # 因子构思 → 最强创造力模型
+  implementation: efficient      # 代码生成 → 高性价比（有重试）
+  analysis: strong               # 结果分析 → 推理型模型
+  unknown: efficient
+
+# ──────────────────────────────────────
+# Model Registry (模型注册表)
+# ──────────────────────────────────────
+# 所有可用模型在此注册，选择器从中挑选
+models:
+  # Frontier 层 — 最强创造力/推理
+  frontier:
+    model_id: "anthropic/claude-opus-4-6"
+    input_price_per_m: 15.0
+    cache_price_per_m: 1.50
+    output_price_per_m: 75.0
+    max_tokens: 8192
+    temperature: 0.7
+
+  # Strong 层 — 高质量推理，性价比好
+  strong:
+    model_id: "deepseek/deepseek-reasoner"
+    input_price_per_m: 0.55
+    cache_price_per_m: 0.14
+    output_price_per_m: 2.19
+    max_tokens: 8192
+    temperature: 1.0
+
+  # Premium 层 — Anthropic 高性价比选项
+  premium:
+    model_id: "anthropic/claude-sonnet-4-6"
+    input_price_per_m: 3.0
+    cache_price_per_m: 0.30
+    output_price_per_m: 15.0
+    max_tokens: 8192
+    temperature: 0.7
+
+  # Efficient 层 — 高吞吐低成本
+  efficient:
+    model_id: "deepseek/deepseek-chat"
+    input_price_per_m: 0.27
+    cache_price_per_m: 0.07
+    output_price_per_m: 1.10
+    max_tokens: 4096
+    temperature: 0.8
+
+# ──────────────────────────────────────
+# Preset Profiles
+# ──────────────────────────────────────
+profiles:
+  # Profile A: 全 DeepSeek，~$0.5-1.5 / 30轮
+  budget:
+    adaptive_mode: "budget"
+
+  # Profile B: 推理强化，~$1.5-3.0 / 30轮（推荐）
+  optimized:
+    adaptive_mode: "optimized"
+
+  # Profile C: 最强模型，~$15-30 / 30轮
+  premium:
+    adaptive_mode: "premium"
+
+# ──────────────────────────────────────
+# Cost Controls
+# ──────────────────────────────────────
+cost:
+  daily_budget_usd: 5.0
+  alert_threshold_pct: 80
+  log_file: "logs/cost_log.json"
+
+# ──────────────────────────────────────
+# Cache Optimization
+# ──────────────────────────────────────
+cache:
+  enabled: true
+  optimize_message_order: true
+
+# ──────────────────────────────────────
+# Anti-Alpha-Decay Filter (Contribution 2)
+# ──────────────────────────────────────
+alpha_filter:
+  enabled: true
+  similarity_threshold: 0.85
+  max_complexity_depth: 5
+  min_alignment_score: 0.6
+  alignment_model: "deepseek/deepseek-chat"
+
+# ──────────────────────────────────────
+# Bull-Bear Adversarial Debate (Contribution 3)
+# ──────────────────────────────────────
+debate:
+  enabled: true
+  debate_model: "deepseek/deepseek-reasoner"
+  judge_model: "deepseek/deepseek-chat"
+  max_tokens: 1024
+
+# ──────────────────────────────────────
+# Market Regime Detection (Contribution 4)
+# ──────────────────────────────────────
+market_regime:
+  enabled: true
+  model: "deepseek/deepseek-chat"
+  update_interval_iters: 5
+
+# ──────────────────────────────────────
+# Real Backtesting (Qlib) — Contribution 10
+# ──────────────────────────────────────
+backtest:
+  # 数据源优先级:
+  #   1. us_databento — Databento 交易所直连（2020-2026，最权威）
+  #   2. us_data — Qlib 官方免费数据（2000-2020，覆盖更早）
+  qlib_data_path: ""               # 留空则自动检测（优先 us_databento）
+  instrument: "all"                # "all" = 使用数据目录中所有股票
+  eval_start: "2025-01-01"        # 回测评估起始（使用最新数据）
+  eval_end: "2026-03-28"          # 回测评估结束
+  max_stocks: 50                   # 回测股票数（越多越慢，50 是速度/精度平衡点）
+
+# ──────────────────────────────────────
+# Experience Memory (Contribution 6)
+# ──────────────────────────────────────
+experience_memory:
+  filepath: "data/experience.json"
+
+# ──────────────────────────────────────
+# RD-Agent Integration
+# ──────────────────────────────────────
+rdagent:
+  scenario: "fin_factor"
+  costeer:
+    max_debug_iterations: 10
+    max_task_runtime_sec: 600
+    max_backtest_runtime_sec: 3600
+  iterations: 30
+  qlib:
+    market: "csi300"
+    train_start: "2008-01-01"
+    train_end: "2014-12-31"
+    valid_start: "2015-01-01"
+    valid_end: "2016-12-31"
+    test_start: "2017-01-01"
+    test_end: "2020-08-01"
+    base_model: "LightGBM"
+    init_factors: "alpha20"
