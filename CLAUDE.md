@@ -103,12 +103,14 @@ by Chain-of-Alpha (Aug 2025) and FactorEngine (Mar 2026).
 - Hypothesis-factor alignment: LLM verifies code matches stated hypothesis
 - **NEW: Hyperbolic decay** (Lee 2025): older factors have relaxed thresholds, alpha(t)=K/(1+λt)
 
-### Contribution 3: Bull-Bear Adversarial Debate (COMPLETED)
+### Contribution 3: Bull-Bear Adversarial Debate (COMPLETED + UPGRADED)
 - File: `src/debate_agents.py`
 - Two adversarial agents (Bull/Bear) debate each iteration's direction
 - Judge agent synthesizes CONTINUE/PIVOT/NEUTRAL verdict
-- **NEW: Debate feedback loop**: verdict (PIVOT/CONTINUE) injects into next synthesis prompt
-- Reduces confirmation bias, adds only 3 LLM calls per iteration
+- **V2: Router integration** — auto-selects best LLM via MultiModelRouter (premium=Opus, budget=DeepSeek)
+- **V2: Evidence-based prompts** — Bull/Bear must cite specific metrics (IC, Sharpe, MDD)
+- **V2: debate_with_history()** — injects past debate records to avoid repeating arguments
+- 25 tests passing
 
 ### Contribution 4: Market Regime-Aware RAG (COMPLETED)
 - File: `src/market_regime.py`
@@ -185,6 +187,45 @@ by Chain-of-Alpha (Aug 2025) and FactorEngine (Mar 2026).
 - Turnover monitoring and cost estimation
 - 23 tests passing
 
+### Contribution 15: Investment Principles (NEW — Phase 2)
+- File: `src/investment_principles.py`
+- Kelly Criterion: optimal position sizing with half-Kelly and max cap
+- Mean-Variance Optimization (Markowitz): analytical solution for max Sharpe
+- Risk Parity: equal risk contribution allocation (Spinu 2013 algorithm)
+- Black-Litterman: Bayesian fusion of market equilibrium + subjective views
+- Maximum Drawdown Control: dynamic position scaling based on equity curve
+- Composite position advisor: Kelly × DrawdownControl
+- 33 tests passing
+
+### Contribution 16: Self Optimizer (NEW — Phase 2)
+- File: `src/self_optimizer.py`
+- CodeAnalyzer: file size, function count, complexity, import analysis
+- ImportAnalyzer: builds import graph, detects orphan modules
+- DuplicationDetector: cross-file duplicate code detection (line-level hashing)
+- DocAnalyzer: detects tiny/empty/redundant documentation
+- Generates actionable optimization reports (Markdown + structured data)
+- 20 tests passing
+
+### Contribution 17: External Scout (NEW — Phase 2)
+- File: `src/external_scout.py`
+- ArxivScout: searches arXiv API for quantitative factor research
+- GitHubScout: searches GitHub for factor generation tools/libraries
+- ScoutPipeline: Search → Filter → Evaluate → Integrate workflow
+- **Skill互调**: ScoutResult → FactorReviewer (评估) → FactorLibrary (入库)
+- Configurable relevance filtering and auto-evaluation
+- JSON-based search history persistence
+- 22 tests passing
+
+### Contribution 18: Fundamental Analyst (NEW — Phase 2)
+- File: `src/fundamental_analyst.py`
+- Three-dimensional scoring: Valuation (40%) + Quality (35%) + Growth (25%)
+- Valuation: PE/PB/PEG scoring + Graham Number + sector comparison
+- Quality: ROE/margin/debt + Piotroski F-Score (9-point financial health check)
+- Growth: revenue/earnings/FCF growth rate scoring
+- SignalGenerator: composite score → trading action (buy/sell/hold + target position)
+- FundamentalLLMAnalyst: optional deep analysis via model_router
+- 28 tests passing
+
 ## Current Project Structure
 
 ```
@@ -200,24 +241,28 @@ rdagent-quant-opt/
 ├── CONTRIBUTING.md
 │
 ├── src/
-│   ├── __init__.py            ← v0.6.0, exports all modules
+│   ├── __init__.py            ← v0.7.0, exports all modules
 │   ├── model_router.py        ← Multi-model router + adaptive selector + cost tracker
 │   ├── alpha_filter.py        ← AST similarity + complexity + alignment + hyperbolic decay
-│   ├── debate_agents.py       ← Bull-Bear adversarial analysis (with feedback loop)
+│   ├── debate_agents.py       ← Bull-Bear adversarial debate (V2: router + evidence + history)
 │   ├── market_regime.py       ← Market regime detection + RAG injection
 │   ├── pipeline.py            ← Complete pipeline with debate feedback + memory
 │   ├── data_provider.py       ← Unified data interface (Polygon + Yahoo), fallback for pipeline
-│   ├── survivorship_bias.py   ← S&P 500 historical membership correction (integrated into backtester)
-│   ├── data_validator.py      ← OHLCV data quality validation (integrated into backtester)
+│   ├── survivorship_bias.py   ← S&P 500 historical membership correction (integrated)
+│   ├── data_validator.py      ← OHLCV data quality validation (integrated)
 │   ├── experience_memory.py   ← Experience memory for cross-iteration learning
 │   ├── param_optimizer.py     ← Logic/parameter decoupling optimizer
 │   ├── trajectory_evolution.py← Trajectory-level mutation and crossover
 │   ├── qlib_backtester.py     ← Real factor backtesting via Qlib (IC/ICIR/Sharpe)
 │   ├── report_generator.py    ← Auto-generate Markdown + JSON reports
-│   ├── factor_translator.py   ← NEW: Factor code → trading strategy translation
-│   ├── factor_reviewer.py     ← NEW: Deep attribution analysis + grading
-│   ├── factor_library.py      ← NEW: Factor storage, versioning, search, ranking
-│   └── position_guard.py      ← NEW: Stop-loss, take-profit, turnover control
+│   ├── factor_translator.py   ← Factor code → trading strategy translation
+│   ├── factor_reviewer.py     ← Deep attribution analysis + grading
+│   ├── factor_library.py      ← Factor storage, versioning, search, ranking
+│   ├── position_guard.py      ← Stop-loss, take-profit, turnover control
+│   ├── investment_principles.py ← Kelly/Markowitz/Risk Parity/Black-Litterman/MDD control
+│   ├── self_optimizer.py      ← Code analysis + orphan detection + duplication + optimization
+│   ├── external_scout.py      ← arXiv/GitHub search + evaluate + integrate pipeline
+│   └── fundamental_analyst.py ← Fundamental analysis + signal generation + LLM deep analysis
 │
 ├── configs/
 │   └── default.yaml        ← All module configs (data, models, filter, debate, regime)
@@ -230,11 +275,12 @@ rdagent-quant-opt/
 │   ├── download_databento.py ← Databento exchange-direct data downloader
 │   └── security_check.sh   ← 7-point pre-push privacy/security scan
 │
-├── tests/                       ← 303 unit + integration tests
+├── tests/                       ← ~431 unit + integration tests
 │   ├── test_classifier.py       ← Stage classification (13 tests)
 │   ├── test_router.py           ← Router + adaptive selector + cost (24 tests)
 │   ├── test_alpha_filter.py     ← Alpha decay filter + hyperbolic decay (15 tests)
 │   ├── test_debate.py           ← Debate agents (6 tests)
+│   ├── test_advanced_debate.py  ← Debate V2: router + evidence + history (25 tests)
 │   ├── test_market_regime.py    ← Market regime (9 tests)
 │   ├── test_pipeline.py         ← Pipeline assembly (13 tests)
 │   ├── test_report_generator.py ← Report generator (20 tests)
@@ -247,7 +293,11 @@ rdagent-quant-opt/
 │   ├── test_factor_translator.py← Factor translator (30 tests)
 │   ├── test_factor_reviewer.py  ← Factor reviewer (29 tests)
 │   ├── test_factor_library.py   ← Factor library (19 tests)
-│   └── test_position_guard.py   ← Position guard (23 tests)
+│   ├── test_position_guard.py   ← Position guard (23 tests)
+│   ├── test_investment_principles.py ← Kelly/MVO/RiskParity/BL/MDD (33 tests)
+│   ├── test_self_optimizer.py   ← Self optimizer (20 tests)
+│   ├── test_external_scout.py   ← External scout (22 tests)
+│   └── test_fundamental_analyst.py ← Fundamental analyst (28 tests)
 │
 ├── docs/
 │   ├── ARCHITECTURE.md      ← Detailed architecture analysis
